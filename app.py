@@ -26,36 +26,40 @@ HTML_TEMPLATE = '''
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GeoScan Minerals</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
-    .container { max-width: 1200px; margin: 0 auto; }
+    .container { max-width: 1400px; margin: 0 auto; }
     header { text-align: center; color: white; margin-bottom: 40px; }
     header h1 { font-size: 2.5em; margin-bottom: 10px; }
-    .main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 40px; }
-    .card { background: white; border-radius: 10px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+    .main-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 40px; }
+    .card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
     .card h2 { color: #667eea; margin-bottom: 20px; font-size: 1.5em; }
     .form-group { margin-bottom: 15px; }
     label { display: block; margin-bottom: 5px; font-weight: 600; color: #333; }
     input, textarea, select { width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 5px; font-size: 1em; }
     input:focus, textarea:focus, select:focus { outline: none; border-color: #667eea; }
-    .btn { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 30px; border: none; border-radius: 5px; cursor: pointer; font-weight: 600; width: 100%; margin-top: 10px; }
+    .btn { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: 600; width: 100%; margin-top: 10px; }
     .btn:hover { transform: scale(1.02); }
-    .info-box { background: #f9f9f9; padding: 15px; border-radius: 5px; margin-bottom: 15px; border-left: 4px solid #667eea; }
-    .info-box h3 { color: #667eea; margin-bottom: 8px; }
-    .info-box p { color: #666; font-size: 0.9em; line-height: 1.5; }
-    .leaderboard-item { padding: 12px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; }
-    .mineral-info { background: #f0f7ff; padding: 15px; border-radius: 5px; margin: 10px 0; }
-    .price-tag { background: #4caf50; color: white; padding: 5px 10px; border-radius: 3px; font-weight: 600; }
+    .map-btn { background: #4caf50; width: auto; padding: 8px 15px; margin-top: 5px; }
+    .info-box { background: #f9f9f9; padding: 12px; border-radius: 5px; margin-bottom: 12px; border-left: 4px solid #667eea; }
+    .leaderboard-item { padding: 12px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: background 0.3s; }
+    .leaderboard-item:hover { background: #f5f5f5; }
+    .mineral-info { background: #f0f7ff; padding: 12px; border-radius: 5px; margin: 10px 0; }
+    .price-tag { background: #4caf50; color: white; padding: 4px 8px; border-radius: 3px; font-weight: 600; font-size: 0.9em; }
     .success-msg { background: #4caf50; color: white; padding: 12px; border-radius: 5px; margin-bottom: 15px; display: none; }
+    #map { height: 400px; border-radius: 10px; margin-bottom: 10px; }
+    @media (max-width: 1200px) { .main-grid { grid-template-columns: 1fr 1fr; } }
     @media (max-width: 768px) { .main-grid { grid-template-columns: 1fr; } }
     </style>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
     <div class="container">
         <header>
             <h1>GeoScan Minerals</h1>
-            <p>Identify minerals, share discoveries, earn rewards!</p>
+            <p>Identify minerals, share discoveries, earn rewards - with location mapping!</p>
         </header>
         
         <div class="main-grid">
@@ -79,6 +83,7 @@ HTML_TEMPLATE = '''
                     <div class="form-group">
                         <label for="location">Location (Lat, Lon)</label>
                         <input type="text" id="location" name="location" placeholder="e.g., 27.1751, 78.0421" required>
+                        <button type="button" class="btn map-btn" onclick="showMapModal()">View on Map</button>
                     </div>
                     <div class="form-group">
                         <label for="properties">Properties</label>
@@ -90,24 +95,28 @@ HTML_TEMPLATE = '''
                     </div>
                     <button type="submit" class="btn">Submit & Earn Points</button>
                 </form>
-                
-                <h3 style="margin-top: 25px; color: #667eea;">Mineral Information</h3>
+                <h3 style="margin-top: 20px; color: #667eea;">Mineral Information</h3>
                 <div id="mineralInfo"></div>
+            </div>
+            
+            <div class="card" id="mapCard" style="display: none;">
+                <h2>Location Map</h2>
+                <div id="map"></div>
+                <button onclick="closeMapModal()" class="btn">Close</button>
             </div>
             
             <div class="card">
                 <h2>Top Contributors</h2>
-                <div id="leaderboard">
-                    <p style="text-align: center; color: #999;">No submissions yet. Be the first!</p>
+                <div id="leaderboard" style="max-height: 400px; overflow-y: auto;">
+                    <p style="text-align: center; color: #999;">No submissions yet.</p>
                 </div>
-                
-                <h3 style="margin-top: 25px; color: #667eea;">Market Prices (per kg)</h3>
+                <h3 style="margin-top: 20px; color: #667eea;">Market Prices (per kg)</h3>
                 <div id="prices"></div>
             </div>
         </div>
     </div>
-    
     <script>
+    let map = null;
     const mineralData = {
         'Quartz': {'use': 'Glass, Electronics, Jewelry', 'price': 2.5, 'hardness': 7},
         'Feldspar': {'use': 'Ceramics, Glass, Fillers', 'price': 1.8, 'hardness': 6},
@@ -116,6 +125,23 @@ HTML_TEMPLATE = '''
         'Hematite': {'use': 'Iron ore, Pigments, Jewelry', 'price': 3.5, 'hardness': 5.5},
         'Magnetite': {'use': 'Iron ore, Electronics', 'price': 2.8, 'hardness': 6}
     };
+    
+    function showMapModal() {
+        const location = document.getElementById('location').value;
+        if (!location) { alert('Enter location!'); return; }
+        const [lat, lon] = location.split(',').map(x => parseFloat(x.trim()));
+        if (isNaN(lat) || isNaN(lon)) { alert('Invalid format: lat, lon'); return; }
+        document.getElementById('mapCard').style.display = 'block';
+        window.scrollTo(0, 0);
+        setTimeout(() => {
+            if (map) map.remove();
+            map = L.map('map').setView([lat, lon], 10);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution: 'OSM'}).addTo(map);
+            L.marker([lat, lon]).addTo(map).bindPopup('Sample Location');
+        }, 100);
+    }
+    
+    function closeMapModal() { document.getElementById('mapCard').style.display = 'none'; }
     
     document.getElementById('submitForm').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -126,9 +152,8 @@ HTML_TEMPLATE = '''
             imageUrl: document.getElementById('imageUrl').value,
             timestamp: new Date().toISOString()
         };
-        
         try {
-            const res = await fetch('/api/submit', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
+            const res = await fetch('/api/submit', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)});
             if (res.ok) {
                 document.getElementById('successMsg').style.display = 'block';
                 document.getElementById('submitForm').reset();
@@ -144,14 +169,19 @@ HTML_TEMPLATE = '''
             if (!data || data.length === 0) {
                 lb.innerHTML = '<p style="text-align: center; color: #999;">No submissions yet.</p>';
             } else {
-                lb.innerHTML = data.map((item, i) => `<div class="leaderboard-item"><span>#${i+1} ${item.mineralName}</span><span>${item.points} pts</span></div>`).join('');
+                lb.innerHTML = data.map((item, i) => `<div class="leaderboard-item" onclick="loadLocationMap('${item.location}')"><span>#${i+1} ${item.mineralName}</span><span>${item.points} pts</span></div>`).join('');
             }
         });
     }
     
+    function loadLocationMap(location) {
+        document.getElementById('location').value = location;
+        showMapModal();
+    }
+    
     function showPrices() {
         const prices = document.getElementById('prices');
-        prices.innerHTML = Object.entries(mineralData).map(([name, data]) => `<div class="info-box"><strong>${name}:</strong> $${data.price}/kg (Hardness: ${data.hardness})</div>`).join('');
+        prices.innerHTML = Object.entries(mineralData).map(([name, data]) => `<div class="info-box"><strong>${name}:</strong> <span class="price-tag">$${data.price}/kg</span> (Hardness: ${data.hardness})</div>`).join('');
     }
     
     window.addEventListener('load', () => {

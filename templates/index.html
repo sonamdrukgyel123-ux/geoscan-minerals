@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="main-content">
+    <div class="hero-section">
+        <h2>Welcome to GeoScan Minerals</h2>
+        <p>Identify minerals, earn rewards, and contribute to the global mining database</p>
+    </div>
+
+    <div class="success-msg" id="successMsg" style="display: none;">✓ Submission successful!
+    </div>
+
+    <div class="card">
+        <h2>📝 Submit Mineral Discovery</h2>
+        <form id="submitForm">
+            <div class="form-group">
+                <label>Mineral Name:</label>
+                <select id="mineralName" required>
+                    <option value="">Select Mineral</option>
+                    <option>Gold</option>
+                    <option>Silver</option>
+                    <option>Copper</option>
+                    <option>Iron</option>
+                    <option>Diamond</option>
+                    <option>Coal</option>
+                    <option>Limestone</option>
+                    <option>Quartz</option>
+                </select>
+            </div>
+            <div id="mineralInfo"></div>
+            <div class="form-group">
+                <label>Location (lat, lon):</label>
+                <input type="text" id="location" placeholder="e.g., 27.4728, 89.6394" required>
+                <button type="button" onclick="showMapModal()" class="btn-secondary">📍 View on Map</button>
+            </div>
+            <div class="form-group">
+                <label>Properties:</label>
+                <textarea id="properties" rows="3" placeholder="Describe mineral properties..." required></textarea>
+            </div>
+            <div class="form-group">
+                <label>Image URL:</label>
+                <input type="url" id="imageUrl" placeholder="https://example.com/image.jpg">
+            </div>
+            <button type="submit" class="btn-primary">Submit Discovery</button>
+        </form>
+    </div>
+
+    <div class="card" id="leaderboard-section">
+        <h2>🏆 Leaderboard</h2>
+        <div id="leaderboard"></div>
+    </div>
+
+    <div class="card" id="minerals-section">
+        <h2>💰 Current Mineral Prices</h2>
+        <div id="prices"></div>
+    </div>
+</div>
+
+<div class="overlay" id="overlay" onclick="closeMapModal()"></div>
+<div id="mapCard" class="map-card">
+    <span class="close-btn" onclick="closeMapModal()">&times;</span>
+    <h3>Location Map</h3>
+    <div id="map"></div>
+</div>
+{% endblock %}
